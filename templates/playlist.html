@@ -27,7 +27,7 @@
             <tr>
               <td><input type="checkbox" class="track-cb" value="{{ track.videoId }}" data-set-video-id="{{ track.setVideoId }}"></td>
               <td>{{ (page - 1) * 50 + loop.index }}</td>
-              <td>{{ track.title }}</td>
+              <td><a href="https://music.youtube.com/watch?v={{ track.videoId }}" target="_blank" rel="noopener">{{ track.title }}</a></td>
               <td>{{ track.artists | map(attribute='name') | join(', ') }}</td>
               <td>{{ track.album.name if track.album else 'Unknown' }}</td>
               <td>{{ track.duration }}</td>

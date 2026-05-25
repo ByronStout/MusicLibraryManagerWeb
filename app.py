@@ -14,13 +14,18 @@ AUTH_FILE = "browser.json"
 
 app = Flask(__name__)
 
+_ytmusic = None
+
 
 def load_ytmusic():
-    if not os.path.exists(AUTH_FILE):
-        raise FileNotFoundError(
-            f"Authentication file '{AUTH_FILE}' not found. Copy your browser.json file into this project folder."
-        )
-    return YTMusic(AUTH_FILE)
+    global _ytmusic
+    if _ytmusic is None:
+        if not os.path.exists(AUTH_FILE):
+            raise FileNotFoundError(
+                f"Authentication file '{AUTH_FILE}' not found. Copy your browser.json file into this project folder."
+            )
+        _ytmusic = YTMusic(AUTH_FILE)
+    return _ytmusic
 
 
 @app.route("/")
