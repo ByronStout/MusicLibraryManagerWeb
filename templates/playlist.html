@@ -85,13 +85,13 @@
     </div>
   </div>
 
-  <div class="modal-overlay" id="copy-progress-modal">
+  <div class="modal-overlay" id="progress-modal">
     <div class="modal">
-      <h3 id="copy-progress-title">Copying…</h3>
+      <h3 id="progress-title"></h3>
       <div class="progress-bar-track"><div class="progress-bar-fill" id="progress-fill"></div></div>
       <p class="progress-label" id="progress-label"></p>
       <div class="modal-actions">
-        <button type="button" class="btn" id="copy-close-btn" style="display:none">Close</button>
+        <button type="button" class="btn" id="progress-close-btn" style="display:none">Close</button>
       </div>
     </div>
   </div>
@@ -118,10 +118,11 @@
     const copyPickerModal = document.getElementById('copy-picker-modal');
     const copyPickerMsg = document.getElementById('copy-picker-msg');
     const copyPickerList = document.getElementById('copy-picker-list');
-    const copyProgressModal = document.getElementById('copy-progress-modal');
+    const progressModal = document.getElementById('progress-modal');
+    const progressTitle = document.getElementById('progress-title');
     const progressFill = document.getElementById('progress-fill');
     const progressLabel = document.getElementById('progress-label');
-    const copyCloseBtn = document.getElementById('copy-close-btn');
+    const progressCloseBtn = document.getElementById('progress-close-btn');
     const currentPlaylistId = '{{ playlist_id }}';
 
     function escapeHtml(s) {
@@ -157,6 +158,21 @@
         .map(cb => ({ videoId: cb.value, setVideoId: cb.dataset.setVideoId }));
     }
 
+    function showProgress(title, onClose) {
+      progressTitle.textContent = title;
+      progressFill.style.width = '0%';
+      progressLabel.textContent = 'Starting…';
+      progressCloseBtn.style.display = 'none';
+      progressCloseBtn.onclick = () => { progressModal.classList.remove('active'); onClose(); };
+      progressModal.classList.add('active');
+    }
+
+    function finishProgress(msg) {
+      progressFill.style.width = '100%';
+      progressLabel.textContent = msg;
+      progressCloseBtn.style.display = '';
+    }
+
     // --- Delete ---
     if (btnDelete) {
       btnDelete.addEventListener('click', () => {
@@ -177,21 +193,31 @@
       const confirmBtn = document.getElementById('modal-confirm');
       confirmBtn.disabled = true;
       confirmBtn.textContent = 'Deleting…';
-      try {
-        const resp = await fetch('{{ url_for("playlist_delete_tracks", playlist_id=playlist_id) }}', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ tracks })
-        });
-        const data = await resp.json();
-        if (data.error) throw new Error(data.error);
-        window.location.reload();
-      } catch (err) {
-        deleteModal.classList.remove('active');
-        confirmBtn.disabled = false;
-        confirmBtn.textContent = 'Delete';
-        alert('Error deleting tracks: ' + err.message);
+      deleteModal.classList.remove('active');
+
+      showProgress('Deleting Tracks', () => window.location.reload());
+
+      let failed = 0;
+      for (let i = 0; i < tracks.length; i++) {
+        progressLabel.textContent = `Deleting track ${i + 1} of ${tracks.length}…`;
+        progressFill.style.width = `${(i / tracks.length) * 100}%`;
+        try {
+          const resp = await fetch('{{ url_for("playlist_delete_tracks", playlist_id=playlist_id) }}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tracks: [tracks[i]] })
+          });
+          const data = await resp.json();
+          if (data.error) failed++;
+        } catch { failed++; }
       }
+
+      confirmBtn.disabled = false;
+      confirmBtn.textContent = 'Delete';
+      finishProgress(failed === 0
+        ? `Delete complete — ${tracks.length} track${tracks.length !== 1 ? 's' : ''} removed successfully.`
+        : `Done — ${tracks.length - failed} of ${tracks.length} deleted (${failed} failed).`
+      );
     });
 
     // --- Copy ---
@@ -204,7 +230,7 @@
         const resp = await fetch('/api/playlists');
         const playlists = await resp.json();
         if (playlists.error) throw new Error(playlists.error);
-        const filtered = playlists.filter(p => p.playlistId !== currentPlaylistId);
+        const filtered = playlists.filter(p => p.playlistId !== currentPlaylistId && p.title !== 'Liked Music');
         if (filtered.length === 0) {
           copyPickerList.innerHTML = '<li style="padding:12px 14px;color:#5f6368">No other playlists available.</li>';
           return;
@@ -232,11 +258,7 @@
 
     async function startCopy(destId, destTitle) {
       copyPickerModal.classList.remove('active');
-      document.getElementById('copy-progress-title').textContent = `Copying to "${destTitle}"`;
-      progressFill.style.width = '0%';
-      progressLabel.textContent = 'Starting…';
-      copyCloseBtn.style.display = 'none';
-      copyProgressModal.classList.add('active');
+      showProgress(`Copying to "${destTitle}"`, () => {});
 
       const tracks = selectedTracks();
       let failed = 0;
@@ -254,15 +276,10 @@
         } catch { failed++; }
       }
 
-      progressFill.style.width = '100%';
-      progressLabel.textContent = failed === 0
+      finishProgress(failed === 0
         ? `Copy complete — ${tracks.length} track${tracks.length !== 1 ? 's' : ''} copied successfully.`
-        : `Done — ${tracks.length - failed} of ${tracks.length} copied (${failed} failed).`;
-      copyCloseBtn.style.display = '';
+        : `Done — ${tracks.length - failed} of ${tracks.length} copied (${failed} failed).`
+      );
     }
-
-    copyCloseBtn.addEventListener('click', () => {
-      copyProgressModal.classList.remove('active');
-    });
   </script>
 {% endblock %}
