@@ -91,6 +91,7 @@
       <div class="progress-bar-track"><div class="progress-bar-fill" id="progress-fill"></div></div>
       <p class="progress-label" id="progress-label"></p>
       <div class="modal-actions">
+        <button type="button" class="btn btn-secondary" id="progress-go-btn" style="display:none">Go to Playlist</button>
         <button type="button" class="btn" id="progress-close-btn" style="display:none">Close</button>
       </div>
     </div>
@@ -123,6 +124,7 @@
     const progressFill = document.getElementById('progress-fill');
     const progressLabel = document.getElementById('progress-label');
     const progressCloseBtn = document.getElementById('progress-close-btn');
+    const progressGoBtn = document.getElementById('progress-go-btn');
     const currentPlaylistId = '{{ playlist_id }}';
 
     function escapeHtml(s) {
@@ -163,14 +165,19 @@
       progressFill.style.width = '0%';
       progressLabel.textContent = 'Starting…';
       progressCloseBtn.style.display = 'none';
+      progressGoBtn.style.display = 'none';
       progressCloseBtn.onclick = () => { progressModal.classList.remove('active'); onClose(); };
       progressModal.classList.add('active');
     }
 
-    function finishProgress(msg) {
+    function finishProgress(msg, destId = null) {
       progressFill.style.width = '100%';
       progressLabel.textContent = msg;
       progressCloseBtn.style.display = '';
+      if (destId) {
+        progressGoBtn.style.display = '';
+        progressGoBtn.onclick = () => { window.location.href = `/playlist/${destId}`; };
+      }
     }
 
     // --- Delete ---
@@ -220,34 +227,35 @@
       );
     });
 
-    // --- Copy ---
-    btnCopy.addEventListener('click', async () => {
-      const n = selectedTracks().length;
-      copyPickerMsg.textContent = `Select which playlist to copy the ${n} selected track${n !== 1 ? 's' : ''} to:`;
+    // --- Shared playlist picker ---
+    function showPicker(message, onSelect) {
+      copyPickerMsg.textContent = message;
       copyPickerList.innerHTML = '<li style="padding:12px 14px;color:#5f6368">Loading…</li>';
       copyPickerModal.classList.add('active');
-      try {
-        const resp = await fetch('/api/playlists');
-        const playlists = await resp.json();
-        if (playlists.error) throw new Error(playlists.error);
-        const filtered = playlists.filter(p => p.playlistId !== currentPlaylistId && p.title !== 'Liked Music');
-        if (filtered.length === 0) {
-          copyPickerList.innerHTML = '<li style="padding:12px 14px;color:#5f6368">No other playlists available.</li>';
-          return;
-        }
-        copyPickerList.innerHTML = filtered.map(p =>
-          `<li><a href="#" data-id="${escapeHtml(p.playlistId)}" data-title="${escapeHtml(p.title)}">${escapeHtml(p.title)}</a></li>`
-        ).join('');
-        copyPickerList.querySelectorAll('a').forEach(a => {
-          a.addEventListener('click', e => {
-            e.preventDefault();
-            startCopy(a.dataset.id, a.dataset.title);
+      fetch('/api/playlists')
+        .then(r => r.json())
+        .then(playlists => {
+          if (playlists.error) throw new Error(playlists.error);
+          const filtered = playlists.filter(p => p.playlistId !== currentPlaylistId && p.title !== 'Liked Music');
+          if (filtered.length === 0) {
+            copyPickerList.innerHTML = '<li style="padding:12px 14px;color:#5f6368">No other playlists available.</li>';
+            return;
+          }
+          copyPickerList.innerHTML = filtered.map(p =>
+            `<li><a href="#" data-id="${escapeHtml(p.playlistId)}" data-title="${escapeHtml(p.title)}">${escapeHtml(p.title)}</a></li>`
+          ).join('');
+          copyPickerList.querySelectorAll('a').forEach(a => {
+            a.addEventListener('click', e => {
+              e.preventDefault();
+              copyPickerModal.classList.remove('active');
+              onSelect(a.dataset.id, a.dataset.title);
+            });
           });
+        })
+        .catch(err => {
+          copyPickerList.innerHTML = `<li style="padding:12px 14px;color:#d93025">Error loading playlists: ${escapeHtml(err.message)}</li>`;
         });
-      } catch (err) {
-        copyPickerList.innerHTML = `<li style="padding:12px 14px;color:#d93025">Error loading playlists: ${escapeHtml(err.message)}</li>`;
-      }
-    });
+    }
 
     document.getElementById('copy-picker-cancel').addEventListener('click', () => {
       copyPickerModal.classList.remove('active');
@@ -256,10 +264,17 @@
       if (e.target === copyPickerModal) copyPickerModal.classList.remove('active');
     });
 
-    async function startCopy(destId, destTitle) {
-      copyPickerModal.classList.remove('active');
-      showProgress(`Copying to "${destTitle}"`, () => {});
+    // --- Copy ---
+    btnCopy.addEventListener('click', () => {
+      const n = selectedTracks().length;
+      showPicker(
+        `Select which playlist to copy the ${n} selected track${n !== 1 ? 's' : ''} to:`,
+        startCopy
+      );
+    });
 
+    async function startCopy(destId, destTitle) {
+      showProgress(`Copying to "${destTitle}"`, () => {});
       const tracks = selectedTracks();
       let failed = 0;
       for (let i = 0; i < tracks.length; i++) {
@@ -275,10 +290,51 @@
           if (data.error) failed++;
         } catch { failed++; }
       }
-
       finishProgress(failed === 0
         ? `Copy complete — ${tracks.length} track${tracks.length !== 1 ? 's' : ''} copied successfully.`
-        : `Done — ${tracks.length - failed} of ${tracks.length} copied (${failed} failed).`
+        : `Done — ${tracks.length - failed} of ${tracks.length} copied (${failed} failed).`,
+        destId
+      );
+    }
+
+    // --- Move ---
+    btnMove.addEventListener('click', () => {
+      const n = selectedTracks().length;
+      showPicker(
+        `Select which playlist to move the ${n} selected track${n !== 1 ? 's' : ''} to:`,
+        startMove
+      );
+    });
+
+    async function startMove(destId, destTitle) {
+      showProgress(`Moving to "${destTitle}"`, () => window.location.reload());
+      const tracks = selectedTracks();
+      let failed = 0;
+      for (let i = 0; i < tracks.length; i++) {
+        progressLabel.textContent = `Moving track ${i + 1} of ${tracks.length}…`;
+        progressFill.style.width = `${(i / tracks.length) * 100}%`;
+        try {
+          const addResp = await fetch(`/playlist/${destId}/add_tracks`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ videoIds: [tracks[i].videoId] })
+          });
+          const addData = await addResp.json();
+          if (addData.error) throw new Error(addData.error);
+
+          const delResp = await fetch('{{ url_for("playlist_delete_tracks", playlist_id=playlist_id) }}', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ tracks: [tracks[i]] })
+          });
+          const delData = await delResp.json();
+          if (delData.error) throw new Error(delData.error);
+        } catch { failed++; }
+      }
+      finishProgress(failed === 0
+        ? `Move complete — ${tracks.length} track${tracks.length !== 1 ? 's' : ''} moved successfully.`
+        : `Done — ${tracks.length - failed} of ${tracks.length} moved (${failed} failed).`,
+        destId
       );
     }
   </script>
