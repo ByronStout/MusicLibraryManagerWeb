@@ -1,11 +1,11 @@
 try:
     from flask import Flask, render_template, abort, url_for, request, jsonify
+    from werkzeug.exceptions import HTTPException
 except ImportError as exc:
     raise ImportError(
         "Flask is required to run this application. Install it with 'pip install Flask'"
     ) from exc
 
-import json
 import os
 
 from ytmusicapi import YTMusic
@@ -59,6 +59,8 @@ def playlist_view(playlist_id):
         tracks = all_tracks[(page - 1) * PAGE_SIZE : page * PAGE_SIZE]
         history = ytmusic.get_history()
         history_lookup = {t["videoId"]: t.get("played", "Never") for t in history}
+    except HTTPException:
+        raise
     except Exception as exc:
         error = str(exc)
     return render_template(
