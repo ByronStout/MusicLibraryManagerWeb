@@ -8,7 +8,9 @@ A browser-based interface for browsing and managing YouTube Music playlists usin
 - View paginated track listings with title, artist, album, duration, and last-played date
 - Select individual tracks or all tracks on the current page via checkboxes
 - **Copy** selected tracks to another playlist (with live progress bar)
+- **Move** selected tracks to another playlist (copy + remove from source)
 - **Delete** selected tracks from the current playlist (with confirmation dialog)
+- Click any track title to open it directly in YouTube Music
 
 ## Requirements
 
@@ -43,3 +45,12 @@ python app.py
 ```
 
 Then open `http://127.0.0.1:5000` in your browser.
+
+## Tests
+
+Install dev dependencies and run the test suite:
+
+```powershell
+pip install -r requirements-dev.txt
+pytest
+```
