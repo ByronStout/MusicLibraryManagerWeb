@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Music Library Manager</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/modern-normalize/1.1.0/modern-normalize.min.css" integrity="sha512-+68Ium6yqp56iAvx/5fGvI8CsagClVDc+9F0Y2gmlf4tVwoQ7FDi3yDpcmj16g/6n0YdRADbFBllD9hLabg7Ig==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+    <style>
+      body { font-family: Arial, sans-serif; padding: 24px; background: #f5f7fb; color: #202124; }
+      header { margin-bottom: 24px; }
+      h1 { margin: 0 0 8px; font-size: 1.8rem; }
+      .container { max-width: 1100px; margin: 0 auto; }
+      table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+      th, td { padding: 10px 12px; text-align: left; }
+      th { background: #1a73e8; color: white; }
+      tr:nth-child(even) { background: #ffffff; }
+      tr:nth-child(odd) { background: #f7f9fc; }
+      a { color: #1a73e8; text-decoration: none; }
+      a:hover { text-decoration: underline; }
+      .error { background: #ffe6e6; color: #8b0000; padding: 12px; border-radius: 5px; margin-bottom: 16px; }
+      .card { background: white; border-radius: 10px; box-shadow: 0 1px 4px rgba(0,0,0,.08); padding: 18px; }
+      .nav { margin-bottom: 16px; }
+      .nav a { margin-right: 16px; }
+      .meta { color: #5f6368; font-size: .95rem; }
+      .pagination { display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-top: 16px; font-size: .95rem; }
+      .pagination a { padding: 5px 10px; border: 1px solid #1a73e8; border-radius: 4px; }
+      .pagination a:hover { background: #e8f0fe; text-decoration: none; }
+      .pg-current { padding: 5px 10px; border-radius: 4px; background: #1a73e8; color: white; font-weight: bold; }
+      .pg-disabled { padding: 5px 10px; color: #aaa; }
+      .pg-ellipsis { padding: 5px 4px; color: #5f6368; }
+      .track-toolbar { display: flex; gap: 8px; margin-top: 12px; margin-bottom: 8px; }
+      .btn { padding: 7px 18px; border-radius: 5px; border: 1px solid transparent; cursor: pointer; font-size: .95rem; background: #1a73e8; color: white; font-weight: 500; }
+      .btn:hover:not(:disabled) { background: #1558b0; }
+      .btn:disabled { background: #c5cae9; color: #9aa0a6; cursor: default; }
+      .btn-secondary { background: #fff; color: #1a73e8; border-color: #1a73e8; }
+      .btn-secondary:hover:not(:disabled) { background: #e8f0fe; }
+      .btn-danger { background: #d93025; }
+      .btn-danger:hover:not(:disabled) { background: #a50e0e; }
+      .modal-overlay { display: none; position: fixed; inset: 0; background: rgba(0,0,0,.45); z-index: 100; align-items: center; justify-content: center; }
+      .modal-overlay.active { display: flex; }
+      .modal { background: white; border-radius: 10px; padding: 28px 32px; max-width: 400px; width: 90%; box-shadow: 0 4px 24px rgba(0,0,0,.2); }
+      .modal h3 { margin: 0 0 10px; font-size: 1.1rem; }
+      .modal p { margin: 0 0 22px; color: #5f6368; }
+      .modal-actions { display: flex; gap: 10px; justify-content: flex-end; }
+      .modal-submsg { color: #5f6368; margin-bottom: 10px; }
+      .modal-list { list-style: none; padding: 0; margin: 0 0 16px; max-height: 300px; overflow-y: auto; border: 1px solid #e0e0e0; border-radius: 6px; }
+      .modal-list li a { display: block; padding: 10px 14px; color: #202124; text-decoration: none; border-bottom: 1px solid #f0f0f0; }
+      .modal-list li:last-child a { border-bottom: none; }
+      .modal-list li a:hover { background: #e8f0fe; color: #1a73e8; text-decoration: none; }
+      .progress-bar-track { background: #e0e0e0; border-radius: 6px; height: 14px; overflow: hidden; margin-bottom: 10px; }
+      .progress-bar-fill { background: #1a73e8; height: 100%; width: 0%; transition: width .25s ease; border-radius: 6px; }
+      .progress-label { font-size: .9rem; color: #5f6368; margin-bottom: 18px; min-height: 1.4em; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <header>
+        <h1>Music Library Manager</h1>
+        <p class="meta">Browser view for your YouTube Music playlists and track history.</p>
+      </header>
+      <div class="nav"><a href="{{ url_for('index') }}">Home</a></div>
+      {% if error %}
+        <div class="error">{{ error }}</div>
+      {% endif %}
+      <div class="card">{% block content %}{% endblock %}</div>
+    </div>
+  </body>
+</html>

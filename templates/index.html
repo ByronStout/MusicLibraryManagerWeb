@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block content %}
+  <h2>Playlists</h2>
+  {% if playlists %}
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Title</th>
+          <th>Count</th>
+          <th>Browse</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for playlist in playlists %}
+          <tr>
+            <td>{{ loop.index }}</td>
+            <td>{{ playlist.title }}</td>
+            <td>{{ playlist.count }}</td>
+            <td><a href="{{ url_for('playlist_view', playlist_id=playlist.playlistId) }}">View</a></td>
+          </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  {% else %}
+    <p>No playlists found. Make sure your `browser.json` auth file is present.</p>
+  {% endif %}
+{% endblock %}
